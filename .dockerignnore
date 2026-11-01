@@ -1,0 +1,42 @@
+# Build output (rebuilt inside the Docker build stage)
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# IDE / editor files
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and temp files
+*.log
+logs/
+tmp/
+
+# Docker files themselves
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Docs
+*.md
+
+# Local environment / secrets
+.env
+.env.*

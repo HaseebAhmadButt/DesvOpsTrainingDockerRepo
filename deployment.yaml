@@ -21,6 +21,17 @@ spec:
           image: haseebahmadbutt/spring-crud-demo:1.0.1
           ports:
             - containerPort: 8081
+          envFrom:
+            - configMapRef:
+                name: db-config
+            - secretRef:
+                name: db-secret
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: POSTGRES_USER
           resources:
             requests:
               memory: "64Mi"
@@ -48,3 +59,12 @@ spec:
             initialDelaySeconds: 20
             periodSeconds: 15
             failureThreshold: 3
+        - name: demo-crud-db
+          image: postgres
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - configMapRef:
+                name: db-config
+            - secretRef:
+                name: db-secret

@@ -4,8 +4,6 @@ metadata:
   name: db-config
   namespace: default
 data:
-  POSTGRES_DB: productdb
-  POSTGRES_USER: postgres
-  DB_HOST: localhost
-  DB_PORT: "5432"
-  SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/productdb
+#  SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5433/testdb
+  SPRING_DATASOURCE_URL: jdbc:postgresql://demo-crud-service-db:5433/testdb
+  SPRING_DATASOURCE_USERNAME: testuser

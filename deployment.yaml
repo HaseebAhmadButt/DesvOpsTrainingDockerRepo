@@ -6,19 +6,22 @@ metadata:
     app: demo-crud
 spec:
   replicas: 3
+
   selector:
     matchLabels:
       app: demo-crud
+
   template:
     metadata:
       name: demo-crud-pod
       labels:
         app: demo-crud
+
     spec:
       restartPolicy: Always
       containers:
         - name: demo-crud
-          image: haseebahmadbutt/spring-crud-demo:1.0.1
+          image: haseebahmadbutt/spring-crud-demo:1.1.2
           ports:
             - containerPort: 8081
           envFrom:
@@ -26,18 +29,12 @@ spec:
                 name: db-config
             - secretRef:
                 name: db-secret
-          env:
-            - name: SPRING_DATASOURCE_USERNAME
-              valueFrom:
-                configMapKeyRef:
-                  name: db-config
-                  key: POSTGRES_USER
           resources:
             requests:
-              memory: "64Mi"
+              memory: "256Mi"
               cpu: "250m"
             limits:
-              memory: "128Mi"
+              memory: "512Mi"
               cpu: "500m"
           startupProbe:
             httpGet:
@@ -59,12 +56,3 @@ spec:
             initialDelaySeconds: 20
             periodSeconds: 15
             failureThreshold: 3
-        - name: demo-crud-db
-          image: postgres
-          ports:
-            - containerPort: 5432
-          envFrom:
-            - configMapRef:
-                name: db-config
-            - secretRef:
-                name: db-secret

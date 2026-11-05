@@ -1,0 +1,59 @@
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: demo-crud-db
+  labels:
+    app: demo-crud-db
+spec:
+  serviceName: demo-crud-headless
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: demo-crud-db
+
+  template:
+    metadata:
+      labels:
+        app: demo-crud-db
+
+    spec:
+      containers:
+        - name: demo-crud-db
+          image: postgres:16
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: SPRING_DATASOURCE_USERNAME
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: SPRING_DATASOURCE_PASSWORD
+
+            - name: POSTGRES_DB
+              value: testdb
+
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-storage
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi

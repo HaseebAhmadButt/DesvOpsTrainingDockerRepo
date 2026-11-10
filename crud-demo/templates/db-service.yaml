@@ -1,0 +1,19 @@
+{{- if .Values.database.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "crud-demo.dbServiceName" . }}
+  labels:
+    {{- include "crud-demo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  type: {{ .Values.database.service.type }}
+  selector:
+    app.kubernetes.io/name: {{ include "crud-demo.fullname" . }}-db
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: database
+  ports:
+    - name: postgres
+      port: {{ .Values.database.service.port }}
+      targetPort: postgres
+{{- end }}

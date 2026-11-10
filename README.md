@@ -50,17 +50,17 @@ curl -X DELETE http://localhost:8081/api/v1/products/1
 3. Push the Docker image to Docker Hub: `docker push haseebahmadbutt/spring-crud-demo:1.1.2`
 
 
-# Complete Kubernetes Cluster Components
-| Category      | Components                                                                 |
-|---------------|----------------------------------------------------------------------------|
+# Complete Kubernetes Cluster Components (https://kubernetes.io/docs/home/)
+| Category      | Components                                                                |
+|---------------|---------------------------------------------------------------------------|
 | Control Plane | API Server, etcd, Scheduler, Controller Manager, Cloud Controller Manager |
-| Worker Node   | Kubelet, Kube-proxy, Container Runtime                                     |
-| Workloads     | Pod, Deployment, ReplicaSet, StatefulSet, DaemonSet, Job, CronJob          |
-| Networking    | Service, Ingress, Gateway, NetworkPolicy                                   |
-| Storage       | PV, PVC, StorageClass                                                      |
-| Configuration | ConfigMap, Secret                                                          |
-| Security      | ServiceAccount, Role, ClusterRole, RoleBinding                             |
-| Scaling       | HPA, VPA, PDB                                                              |
+| Worker Node   | Kubelet, Kube-proxy, Container Runtime                                    |
+| Workloads     | Pod, Deployment, ReplicaSet, StatefulSet, DaemonSet, Job, CronJob         |
+| Networking    | Service, Ingress, Gateway, NetworkPolicy                                  |
+| Storage       | PV, PVC, StorageClass                                                     |
+| Configuration | ConfigMap, Secret                                                         |
+| Security      | ServiceAccount, Role, ClusterRole, RoleBinding                            |
+| Scaling       | HPA, VPA, PDB                                                             |
 
 # Kubernetes Setup
 
@@ -78,16 +78,16 @@ Ingress (traefik, host: localhost)
 
 ## Manifests
 
-| File | Kind | Purpose |
-|------|------|---------|
-| `configmap.yaml` | ConfigMap `db-config` | `SPRING_DATASOURCE_URL` (`jdbc:postgresql://demo-crud-service-db:5433/testdb`) and `SPRING_DATASOURCE_USERNAME` |
-| `secret.yaml` | Secret `db-secret` | `SPRING_DATASOURCE_PASSWORD` |
-| `deployment-db.yaml` | StatefulSet `demo-crud-db` | Postgres 16, 1 replica, `PGDATA=/var/lib/postgresql/data/pgdata`, 5Gi PVC (`postgres-storage`) |
-| `service-db.yaml` | Service `demo-crud-service-db` | Exposes the DB inside the cluster on port 5433 (target 5432) |
-| `deployment.yaml` | Deployment `demo-crud` | 3 replicas of `haseebahmadbutt/spring-crud-demo:1.1.2`; env loaded via `envFrom`; requests 256Mi/250m, limits 512Mi/500m; startup, readiness and liveness probes on `/actuator/health/*` (port 8081) |
-| `service.yaml` | Service `demo-crud` | ClusterIP on port 8084 -> container port 8081 |
-| `ingress.yaml` | Ingress `demo-crud` | Traefik ingress routing `localhost/` to the `demo-crud` Service |
-| `pod.yaml` | Pod `demo-crud-pod` | Standalone Pod, the first learning step (the Deployment re-declares its spec, since a Deployment cannot reference an existing Pod) |
+| File                 | Kind                           | Purpose                                                                                                                                                                                              |
+|----------------------|--------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `configmap.yaml`     | ConfigMap `db-config`          | `SPRING_DATASOURCE_URL` (`jdbc:postgresql://demo-crud-service-db:5433/testdb`) and `SPRING_DATASOURCE_USERNAME`                                                                                      |
+| `secret.yaml`        | Secret `db-secret`             | `SPRING_DATASOURCE_PASSWORD`                                                                                                                                                                         |
+| `deployment-db.yaml` | StatefulSet `demo-crud-db`     | Postgres 16, 1 replica, `PGDATA=/var/lib/postgresql/data/pgdata`, 5Gi PVC (`postgres-storage`)                                                                                                       |
+| `service-db.yaml`    | Service `demo-crud-service-db` | Exposes the DB inside the cluster on port 5433 (target 5432)                                                                                                                                         |
+| `deployment.yaml`    | Deployment `demo-crud`         | 3 replicas of `haseebahmadbutt/spring-crud-demo:1.1.2`; env loaded via `envFrom`; requests 256Mi/250m, limits 512Mi/500m; startup, readiness and liveness probes on `/actuator/health/*` (port 8081) |
+| `service.yaml`       | Service `demo-crud`            | ClusterIP on port 8084 -> container port 8081                                                                                                                                                        |
+| `ingress.yaml`       | Ingress `demo-crud`            | Traefik ingress routing `localhost/` to the `demo-crud` Service                                                                                                                                      |
+| `pod.yaml`           | Pod `demo-crud-pod`            | Standalone Pod, the first learning step (the Deployment re-declares its spec, since a Deployment cannot reference an existing Pod)                                                                   |
 
 ## Deploy (order matters: config and DB first)
 
@@ -219,3 +219,116 @@ kubectl get pods                                     # verify
 ```
 
 Avoid `kubectl delete all --all -A` or `-A` with delete in general. It can wipe system namespaces like `kube-system` and break the cluster. Stick to your own namespace.
+
+# Helm Charts (https://helm.sh/docs/intro/introduction/)
+1. Helm is a package manager for Kubernetes that allows you to define, install, and manage applications on Kubernetes using Helm charts.
+2. Helm charts are collections of files that describe a related set of Kubernetes resources. They provide a convenient way to package and deploy applications, making it easier to manage
+3. Helm charts can be used to deploy applications, manage dependencies, and handle configuration values. They also support versioning, making it easy to roll back to previous versions of an application if needed.
+4. Helm charts can be stored in Helm repositories, which can be public or private. Users can search for and install charts from these repositories using the Helm CLI.
+5. Helm charts can be customized using values files, which allow users to override default configuration settings. This makes it easy to adapt charts to different environments and use cases.
+
+## How templates and values.yaml work
+1. Helm only renders the files inside the chart's `templates/` folder (`crud-demo/templates/`). The plain manifests in the repo root (`deployment.yaml`, `service.yaml`, etc.) are not read by Helm.
+2. Files in `templates/` contain placeholders such as `{{ .Values.replicaCount }}`. Helm fills them with the values from `values.yaml` when rendering, so to change a deployment you only update `values.yaml`.
+3. Values can also be overridden at install time without editing the file: `helm install demo ./crud-demo --set replicaCount=2` or `-f custom-values.yaml`.
+4. If the manifests are placed inside `templates/` with hardcoded values (no `{{ .Values... }}` placeholders), `values.yaml` is no longer needed. Helm will still install, upgrade and roll back them as a release, but you lose per-environment overrides and release-based naming, and every change means editing the template itself.
+5. In this repo, the app Deployment/Service/Ingress and the PostgreSQL StatefulSet/Service are templated from `values.yaml`. The `db-config` ConfigMap and `db-secret` Secret are applied separately (`kubectl apply -f configmap.yaml -f secret.yaml`), and the chart references them by name, so credentials are never stored in `values.yaml`.
+6. Preview the rendered output with `helm template ./crud-demo` and validate with `helm lint ./crud-demo`.
+
+## Basic Helm Commands
+1. `helm create <chart-name>`: Create a new Helm chart with the specified name.
+   ```bash
+   helm create crud-demo
+   ```
+2. `helm install <release-name> <chart-path>`: Install a Helm chart as a release in the Kubernetes cluster. The release name is the name visible in the cluster.
+   ```bash
+   helm install demo ./crud-demo
+   helm install demo ./crud-demo --set replicaCount=2 --set image.tag=1.1.2
+   helm install demo ./crud-demo -f custom-values.yaml
+   helm install demo ./crud-demo -n dev --create-namespace
+   ```
+3. `helm upgrade <release-name> <chart-path>`: Upgrade an existing release. If any values have changed, Helm applies the updates to the resources in the cluster.
+   ```bash
+   helm upgrade demo ./crud-demo
+   helm upgrade demo ./crud-demo --set replicaCount=3
+   helm upgrade --install demo ./crud-demo   # install if the release does not exist yet
+   ```
+4. `helm rollback <release-name> <revision-number>`: Roll back a release to a previous revision, e.g. if an upgrade introduces issues.
+   ```bash
+   helm history demo
+   helm rollback demo 1
+   ```
+5. `helm uninstall <release-name>` (alias `helm delete`): Uninstall a release and remove its resources from the cluster.
+   ```bash
+   helm uninstall demo
+   helm uninstall demo --keep-history
+   ```
+6. `helm list -a`: List all releases, including deployed and deleted ones.
+   ```bash
+   helm list
+   helm list -a
+   helm list -A   # all namespaces
+   ```
+7. `helm lint <chart-path>`: Check the chart for errors and best-practice issues.
+   ```bash
+   helm lint ./crud-demo
+   helm lint ./crud-demo --strict                      # treat warnings as errors
+   helm lint ./crud-demo -f custom-values.yaml         # lint with custom values
+   helm lint ./crud-demo --set replicaCount=2
+   helm lint ./crud-demo --debug
+   ```
+8. `helm template <release-name> <chart-path>`: Render the templates locally without installing, to preview the final manifests.
+   ```bash
+   helm template demo ./crud-demo
+   helm template demo ./crud-demo --set replicaCount=2 > rendered.yaml
+   helm template demo ./crud-demo -f custom-values.yaml
+   helm template demo ./crud-demo --show-only templates/deployment.yaml
+   helm template demo ./crud-demo --debug
+   helm template demo ./crud-demo | kubectl apply -f -
+   ```
+9. `helm install --dry-run --debug`: Simulate an install against the cluster and print the rendered manifests.
+   ```bash
+   helm install demo ./crud-demo --dry-run --debug
+   helm install demo ./crud-demo --dry-run=server --debug   # validate against the cluster API server
+   helm upgrade demo ./crud-demo --dry-run --debug          # preview an upgrade
+   helm install demo ./crud-demo --dry-run --debug --set replicaCount=2
+   ```
+   Note: there is no `--debug-dry-run` flag; it is two flags, `--dry-run` (nothing is installed) and `--debug` (verbose output with computed values and rendered manifests).
+10. `helm status <release-name>`: Show the status and notes of a release.
+    ```bash
+    helm status demo
+    ```
+11. `helm history <release-name>`: Show the revision history of a release.
+    ```bash
+    helm history demo
+    ```
+12. `helm get <values|manifest|all|notes> <release-name>`: Inspect what a deployed release is using.
+    ```bash
+    helm get values demo
+    helm get values demo --all
+    helm get manifest demo
+    ```
+13. `helm show values <chart-path>`: Print the default values of a chart.
+    ```bash
+    helm show values ./crud-demo
+    ```
+14. `helm package <chart-path>`: Package the chart into a versioned `.tgz` archive.
+    ```bash
+    helm package ./crud-demo
+    helm install demo ./crud-demo-0.1.0.tgz
+    ```
+15. `helm test <release-name>`: Run the chart's test hooks (`templates/tests/`).
+    ```bash
+    helm test demo
+    ```
+16. `helm repo` / `helm search` / `helm pull`: Work with chart repositories.
+    ```bash
+    helm repo add bitnami https://charts.bitnami.com/bitnami
+    helm repo update
+    helm search repo postgresql
+    helm pull bitnami/postgresql --untar
+    ```
+17. `helm dependency update <chart-path>`: Download the chart dependencies listed in `Chart.yaml`.
+    ```bash
+    helm dependency update ./crud-demo
+    ```
